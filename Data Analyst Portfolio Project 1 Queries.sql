@@ -1,4 +1,5 @@
 --Looking at Total Cases vs Total Deaths
+
 --Shows the likelihood of dying if you contract COVID in your country
 SELECT location, date, total_cases, total_deaths, 
 (total_deaths::numeric/total_cases) * 100 AS death_percentage
@@ -51,40 +52,3 @@ JOIN covid_vaccinations vacc
 ON dea.location = vacc.location AND dea.date = vacc.date
 WHERE dea.continent IS NOT NULL 
 ORDER BY 2,3;
-
--- Use CTE
-WITH population_vs_vaccinations (continent, location, date, population, new_vaccinations, rolling_people_vaccinated)
-AS
-(SELECT dea.continent, dea.location, dea.date, dea.population, 
-vacc.new_vaccinations, 
-SUM(vacc.new_vaccinations) OVER(PARTITION BY dea.location ORDER BY dea.location, dea.date) AS rolling_people_vaccinated
-FROM covid_deaths dea
-JOIN covid_vaccinations vacc
-ON dea.location = vacc.location AND dea.date = vacc.date
-WHERE dea.continent IS NOT NULL 
-)
-SELECT *, (rolling_people_vaccinated::numeric/population)*100
-FROM population_vs_vaccinations
-
--- Temp Table
-CREATE TEMP TABLE percent_population_vaccinated
-(continent text, location text, date date, population bigint, new_vaccinations int, rolling_people_vaccinated numeric);
-
-INSERT INTO percent_population_vaccinated
-SELECT dea.continent, dea.location, dea.date, dea.population, 
-vacc.new_vaccinations, 
-SUM(vacc.new_vaccinations) OVER(PARTITION BY dea.location ORDER BY dea.location, dea.date) AS rolling_people_vaccinated
-FROM covid_deaths dea
-JOIN covid_vaccinations vacc
-ON dea.location = vacc.location AND dea.date = vacc.date
-WHERE dea.continent IS NOT NULL
-
---Creating a view to store data for later visualizations
-CREATE VIEW percent_population_vaccinated AS 
-SELECT dea.continent, dea.location, dea.date, dea.population, 
-vacc.new_vaccinations, 
-SUM(vacc.new_vaccinations) OVER(PARTITION BY dea.location ORDER BY dea.location, dea.date) AS rolling_people_vaccinated
-FROM covid_deaths dea
-JOIN covid_vaccinations vacc
-ON dea.location = vacc.location AND dea.date = vacc.date
-WHERE dea.continent IS NOT NULL
